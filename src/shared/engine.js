@@ -41,9 +41,13 @@ export function createInput(keyMap) {
   addEventListener('pointermove', (e) => {
     if (e.pointerId !== joyId) return;
     let dx = e.clientX - ox, dy = e.clientY - oy;
-    const l = Math.hypot(dx, dy), max = 50;
+    const l = Math.hypot(dx, dy), max = 56;
     if (l > max) { dx = (dx / l) * max; dy = (dy / l) * max; }
-    stick.x = dx / max; stick.y = dy / max;
+    // dead zone so a resting thumb doesn't drift, then a smooth ramp up to full speed
+    const m = Math.min(1, l / max), dead = 0.14;
+    const r = m < dead ? 0 : Math.pow((m - dead) / (1 - dead), 1.3);
+    const h = Math.hypot(dx, dy) || 1;
+    stick.x = (dx / h) * r; stick.y = (dy / h) * r;
     if (joy) joy.firstElementChild.style.transform = `translate(${dx}px, ${dy}px)`;
   });
   const endJoy = (e) => {

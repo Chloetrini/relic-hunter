@@ -145,6 +145,12 @@
   .rh-touch { position: fixed; right: 18px; bottom: 70px; display: none; gap: 12px; z-index: 7; }
   .rh-touch button { width: 66px; height: 66px; border-radius: 50%; border: 1px solid var(--gold); background: rgba(10,7,4,.45); color: var(--gold); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; touch-action: none; }
   .rh-touch button.down { background: rgba(226,193,120,.35); }
+  .rh-music { position: fixed; top: max(14px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); z-index: 9; height: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid rgba(226,193,120,.55); background: rgba(10,7,4,.5); color: var(--gold); font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; gap: 7px; touch-action: manipulation; }
+  .rh-music svg { width: 15px; height: 15px; }
+  .rh-music.off { color: var(--dim); border-color: rgba(243,234,216,.25); }
+  .rh-music.off .wave { display: none; }
+  .rh-music:not(.off) .mute { display: none; }
+  @media (pointer: coarse) { .rh-music span { display: none; } }
   @media (pointer: coarse) { .rh-touch { display: flex; } .rh-counters { bottom: 150px; } }
   @media (max-width: 640px) { #rh-title { background: linear-gradient(0deg, rgba(8,5,3,.95) 30%, rgba(8,5,3,.3) 80%); } .rh-title-col { top: auto; bottom: 6vh; transform: none; } }
 </style>
@@ -182,7 +188,7 @@
     </div>
     <div class="rh-player" id="rhPlayer"></div>
     <div class="rh-howto" id="rhHowto" hidden>
-      <b>Move</b> WASD or arrows &nbsp;·&nbsp; <b>Jump</b> Space &nbsp;·&nbsp; <b>Fire</b> J or click &nbsp;·&nbsp; <b>Use</b> E<br>
+      <b>Move</b> WASD or arrows &nbsp;·&nbsp; <b>Jump</b> Space &nbsp;·&nbsp; <b>Fire</b> J or click &nbsp;·&nbsp; <b>Use</b> E &nbsp;·&nbsp; <b>Music</b> M<br>
       Jump into a ledge to climb it. Pull the lever, find the three golden keys, take the idol, and outrun what comes next.
     </div>
   </div>
@@ -203,6 +209,7 @@
   <div class="rh-prompt" id="rhPrompt" hidden><kbd>E</kbd><span id="rhPromptText"></span></div>
   <div class="rh-notes" id="rhNotes"></div>
 </div>
+<button class="rh-music" id="rhMusic" hidden title="Music on/off (M)" aria-label="Music on or off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="mute" d="m16 9 6 6m0-6-6 6"/></svg><span>Music</span></button>
 <div class="rh-hurt" id="rhHurt"></div>
 <div class="rh-letterbox" id="rhLetterbox"><div class="lb top"></div><div class="lb bottom"></div><div class="lb-text" id="rhCine"></div></div>
 <div class="rh-fade" id="rhFade"><div id="rhFadeText"></div></div>

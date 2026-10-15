@@ -261,7 +261,8 @@ export function createGame({ scene, level, fx, hooks }) {
     G.inv = Math.max(0, G.inv - dt);
     P.shootCd = Math.max(0, P.shootCd - dt);
     const ax = input.axis;
-    if (input.jump) P.jumpBuf = 0.14; else P.jumpBuf = Math.max(0, P.jumpBuf - dt);
+    if (input.jump) P.jumpBuf = 0.16; else P.jumpBuf = Math.max(0, P.jumpBuf - dt);
+    P.land = Math.max(0, (P.land || 0) - dt * 5);
 
     if (P.climb) {
       const c = P.climb;
@@ -272,15 +273,23 @@ export function createGame({ scene, level, fx, hooks }) {
       if (c.t >= 1) { P.climb = null; P.vel.set(0, 0, 0); P.onGround = true; }
     } else {
       // horizontal control
+      // speed up quickly, stop a bit quicker, steer less in the air (frame-rate independent)
       const tx = ax.x * SPEED, tz = ax.y * SPEED;
-      const k = Math.min(1, dt * (P.onGround ? 16 : 5));
+      const rate = P.onGround ? (ax.mag > 0.05 ? 14 : 20) : (ax.mag > 0.05 ? 6 : 2);
+      const k = 1 - Math.exp(-rate * dt);
       P.vel.x += (tx - P.vel.x) * k; P.vel.z += (tz - P.vel.z) * k;
-      if (ax.mag > 0.1) P.face = lerpAngle(P.face, Math.atan2(ax.x, ax.y), 1 - Math.exp(-14 * dt));
+      if (ax.mag > 0.1) P.face = lerpAngle(P.face, Math.atan2(ax.x, ax.y), 1 - Math.exp(-(P.onGround ? 16 : 9) * dt));
 
       // jump
-      P.coyote = P.onGround ? 0.1 : Math.max(0, P.coyote - dt);
-      if (P.jumpBuf > 0 && P.coyote > 0) { P.vel.y = JUMP; P.onGround = false; P.coyote = 0; P.jumpBuf = 0; tone(300, 0.1, 'triangle', 0.08, 520); }
-      P.vel.y = Math.max(-30, P.vel.y - GRAV * dt);
+      // jump: coyote time + buffer, higher while held, floaty at the top, quicker on the way down
+      P.coyote = P.onGround ? 0.12 : Math.max(0, P.coyote - dt);
+      if (P.jumpBuf > 0 && P.coyote > 0) { P.vel.y = JUMP; P.onGround = false; P.coyote = 0; P.jumpBuf = 0; P.jumping = true; tone(300, 0.1, 'triangle', 0.08, 520); }
+      if (P.vel.y <= 0) P.jumping = false;
+      let g = GRAV;
+      if (P.jumping && !input.jumpHeld) g = GRAV * 2.4;              // let go early = short hop
+      else if (!P.onGround && Math.abs(P.vel.y) < 1.6) g = GRAV * 0.6; // hang at the top
+      else if (P.vel.y < 0) g = GRAV * 1.35;                           // fall faster than you rise
+      P.vel.y = Math.max(-26, P.vel.y - g * dt);
 
       const prevY = P.pos.y;
       P.pos.x += P.vel.x * dt;
@@ -309,7 +318,7 @@ export function createGame({ scene, level, fx, hooks }) {
         P.pos.y += P.vel.y * dt;
         const gy = groundAt(P.pos.x, P.pos.z, prevY + STEP);
         if (P.vel.y <= 0 && P.pos.y <= gy + 0.001) {
-          if (!P.onGround && P.vel.y < -12) { G.shake = 0.15; noise(0.06, 0.1); }
+          if (!P.onGround) { P.land = Math.min(1, -P.vel.y / 14); if (P.vel.y < -12) { G.shake = 0.15; noise(0.06, 0.1); } }
           P.pos.y = gy; P.vel.y = 0; P.onGround = true;
         } else P.onGround = P.vel.y <= 0 && P.pos.y - gy < 0.06;
       }
@@ -318,6 +327,8 @@ export function createGame({ scene, level, fx, hooks }) {
       P.human.update(dt, P.onGround ? hs : 0, { air: !P.onGround });
     }
     P.root.rotation.y = P.face;
+    const sq = P.land * 0.12;   // small squash when landing
+    P.root.scale.set(1 + sq * 0.6, 1 - sq, 1 + sq * 0.6);
 
     // falling into the abyss
     if (P.pos.y < -9) return die('You fell into the darkness');

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { dropSession, getLeaderboard, loadUser, readLocal, saveLocalUser, signInUrl, startngHome, submitRun } from '../shared/user.js';
 import { $, createInput, unlockAudio, tone, createStage } from '../shared/engine.js';
+import { createMusic } from './music.js';
 import { createFx } from './fx.js';
 import { buildLevel } from './level.js';
 import { createGame } from './game.js';
@@ -64,6 +65,16 @@ async function main() {
   input.bindButton($('tJump'), 'jump');
   input.bindButton($('tShoot'), 'shoot');
   input.bindButton($('tUse'), 'use');
+  // ---- music: button in the corner, or the M key
+  const music = createMusic();
+  const musicBtn = $('rhMusic');
+  const showMusic = () => musicBtn.classList.toggle('off', !music.on);
+  showMusic();
+  musicBtn.addEventListener('click', (e) => { e.stopPropagation(); unlockAudio(); music.toggle(); showMusic(); musicBtn.blur(); });
+  addEventListener('keydown', (e) => {
+    if (e.code !== 'KeyM' || e.repeat || e.target.closest?.('input, textarea')) return;
+    unlockAudio(); music.toggle(); showMusic();
+  });
   renderer.domElement.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse' && e.button === 0) G.shoot(); });
 
   // ---- opening screen: your name (or your start.ng account), then the menu
@@ -95,6 +106,7 @@ async function main() {
       unlockAudio();
       tone(147, 0.9, 'sine', 0.08, 196);
       $('rh-gate').hidden = true;
+      musicBtn.hidden = false;
       $('rh-title').hidden = false;
       resolve();
     };
@@ -223,6 +235,8 @@ async function main() {
   const camBase = new THREE.Vector3(0, 6, 12);
   const look = new THREE.Vector3();
   const tmp = new THREE.Vector3();
+  const lookTo = new THREE.Vector3();
+  let camY = 0;
   const clock = new THREE.Clock();
   let hudT = 0, lastObj = '';
   function updateHud() {
@@ -245,17 +259,24 @@ async function main() {
     }
     const jump = G.mode === 'play' && input.pressed('jump');
     if (G.mode !== 'play') input.clearEdges();
-    G.update(dt, { axis: input.axis(), jump });
+    // fixed small steps so running and jumping feel the same at 30, 60 or 120 fps
+    const axis = input.axis(), jumpHeld = G.mode === 'play' && input.held('jump');
+    const steps = Math.max(1, Math.ceil(dt / (1 / 60) - 0.01));
+    for (let i = 0; i < steps; i++) G.update(dt / steps, { axis, jump: jump && i === 0, jumpHeld });
+    music.update(G);
 
     const p = G.player.pos;
     if (G.mode === 'idle') {
       tmp.set(Math.sin(t * 0.15) * 1.8, 3.6, 2.5);
       look.set(Math.sin(t * 0.1) * 2, 1.6, -20);
     } else {
-      tmp.set(p.x * 0.6, p.y + 3.3, Math.min(p.z + 6.2, 4));   // never behind the entrance wall
-      look.set(p.x * 0.85, p.y + 0.75, p.z - 4.5);
+      camY += (p.y - camY) * (1 - Math.exp(-(G.player.onGround ? 6 : 2.5) * dt));   // follow jumps gently
+      tmp.set(p.x * 0.6, camY + 3.3, Math.min(p.z + 6.2, 4));   // never behind the entrance wall
+      lookTo.set(p.x * 0.85, camY + 0.75, p.z - 4.5);
     }
-    camBase.lerp(tmp, 1 - Math.exp(-(G.mode === 'idle' ? 1.5 : 6) * dt));
+    if (G.mode === 'idle') lookTo.copy(look);
+    camBase.lerp(tmp, 1 - Math.exp(-(G.mode === 'idle' ? 1.5 : 7) * dt));
+    look.lerp(lookTo, 1 - Math.exp(-10 * dt));
     const k = G.shake;
     camera.position.set(camBase.x + (Math.random() - 0.5) * k, camBase.y + (Math.random() - 0.5) * k, camBase.z + (Math.random() - 0.5) * k);
     camera.lookAt(look);
@@ -269,7 +290,7 @@ async function main() {
   }
   frame();
 
-  if (location.search.includes('debug')) window.__relic = { G, level, input };
+  if (location.search.includes('debug')) window.__relic = { G, level, input, music };
 }
 
 main();

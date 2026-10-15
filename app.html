@@ -31,6 +31,24 @@
 
   .rh-drawer { position: absolute; right: 0; top: 0; bottom: 0; width: min(400px, 100%); background: rgba(14,10,7,.9); backdrop-filter: blur(6px); border-left: 1px solid rgba(226,193,120,.35); padding: 28px 24px; overflow: auto; z-index: 11; }
   .rh-drawer-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; letter-spacing: .32em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+  .rh-player { margin-top: 22px; font-size: 13px; letter-spacing: .14em; color: rgba(226,193,120,.75); }
+  /* character drawer */
+  .cz-preview { position: relative; height: 330px; margin: 0 -8px 12px; background: radial-gradient(ellipse at 50% 70%, rgba(226,193,120,.16), transparent 65%); }
+  .cz-preview canvas { width: 100%; height: 100%; display: block; cursor: grab; touch-action: pan-y; }
+  .cz-hint { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: rgba(226,193,120,.55); pointer-events: none; }
+  .cz-note { font-size: 14px; line-height: 1.5; color: var(--ink); margin-bottom: 14px; }
+  .cz-note a { color: var(--gold); }
+  .cz-ctrls { display: grid; gap: 14px; }
+  .cz-row { display: grid; gap: 7px; }
+  .cz-row > span { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: rgba(226,193,120,.75); }
+  .cz-row input { background: transparent; border: 0; border-bottom: 1px solid rgba(226,193,120,.45); color: var(--ink); font: inherit; font-size: 17px; padding: 6px 0; outline: none; }
+  .cz-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cz-sw { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .cz-sw.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(0,0,0,.6) inset; }
+  .cz-opt, .cz-seg button { background: none; border: 1px solid rgba(226,193,120,.35); color: var(--ink); padding: 6px 12px; font: inherit; font-size: 14px; text-transform: capitalize; cursor: pointer; }
+  .cz-opt.on, .cz-seg button.on { border-color: var(--gold); color: #1a120a; background: var(--gold); }
+  .cz-seg { display: flex; gap: 0; }
+  .cz-seg button { flex: 1; font-size: 13px; letter-spacing: .2em; text-transform: uppercase; }
   .rh-drawer-head button { background: none; border: 1px solid var(--gold); color: var(--gold); padding: 6px 16px; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; }
   html body .pick { flex-direction: column; align-items: stretch; }
   html body .pick canvas { width: 100%; height: 240px; border-radius: 0; background: radial-gradient(circle at 50% 40%, rgba(226,193,120,.18), transparent 70%); }
@@ -106,6 +124,7 @@
       <button id="rhCustom">Customize explorer</button>
       <button id="rhHow">How to play</button>
     </nav>
+    <div class="rh-player" id="rhPlayer"></div>
     <div class="rh-howto" id="rhHowto" hidden>
       <b>Move</b> WASD or arrows &nbsp;·&nbsp; <b>Jump</b> Space &nbsp;·&nbsp; <b>Fire</b> J or click &nbsp;·&nbsp; <b>Use</b> E<br>
       Jump into a ledge to climb it. Pull the lever, find the three golden keys, take the idol, and outrun what comes next.

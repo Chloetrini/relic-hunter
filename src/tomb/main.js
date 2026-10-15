@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { loadUser } from '../shared/user.js';
-import { $, createInput, unlockAudio, tone, mountCustomizer, createStage } from '../shared/engine.js';
+import { $, createInput, unlockAudio, tone, createStage } from '../shared/engine.js';
 import { createFx } from './fx.js';
 import { buildLevel } from './level.js';
 import { createGame } from './game.js';
-import { buildExplorer } from './explorer.js';
+import { mountCustomizer } from './customizer.js';
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const store = {
@@ -67,9 +67,9 @@ async function main() {
   renderer.domElement.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse' && e.button === 0) G.shoot(); });
 
   // ---- title screen
-  const custom = mountCustomizer($('custom'), user, { builder: buildExplorer, camY: 1.2, camZ: 2.9, lookY: 0.95 });
-  custom.setHidden(true);
-  if (user.source === 'startng') custom.hideControls();
+  const playingAs = () => { $('rhPlayer').textContent = user.source === 'startng' ? `Playing as ${user.name} · start.ng` : `Playing as ${user.name}`; };
+  playingAs();
+  const custom = mountCustomizer($('custom'), user, playingAs);
   $('rhCustom').addEventListener('click', () => { $('rhDrawer').hidden = false; custom.setHidden(false); });
   $('rhClose').addEventListener('click', () => { $('rhDrawer').hidden = true; custom.setHidden(true); G.setupPlayer(user.style); });
   $('rhHow').addEventListener('click', () => { $('rhHowto').hidden = !$('rhHowto').hidden; });
@@ -133,8 +133,8 @@ async function main() {
       tmp.set(Math.sin(t * 0.15) * 1.8, 3.6, 2.5);
       look.set(Math.sin(t * 0.1) * 2, 1.6, -20);
     } else {
-      tmp.set(p.x * 0.6, p.y + 3.6, Math.min(p.z + 6, 4));   // never behind the entrance wall
-      look.set(p.x * 0.85, p.y + 1.1, p.z - 4.5);
+      tmp.set(p.x * 0.6, p.y + 3.3, Math.min(p.z + 6.2, 4));   // never behind the entrance wall
+      look.set(p.x * 0.85, p.y + 0.75, p.z - 4.5);
     }
     camBase.lerp(tmp, 1 - Math.exp(-(G.mode === 'idle' ? 1.5 : 6) * dt));
     const k = G.shake;

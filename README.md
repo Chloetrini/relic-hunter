@@ -17,13 +17,15 @@ Plain browser game: no backend, no accounts needed. Just open `index.html`.
 - Collect 15 gems and 3 keys. The keys open the vault.
 - Taking the idol wakes the boulder. Run back through the vault door to win.
 - Checkpoints save your place. Your best time is kept in your browser.
-- Your look (skin, hair, colour, outfit) is chosen in "Customize explorer" and shows on your explorer.
+- **Your start.ng character plays the game.** On `relichunter.start.ng`, the game asks start.ng who is signed in (through start.ng's `/connect`) and uses that player's character and name. Games never see the email or token.
+- Not signed in? "Customize explorer" has the same options as start.ng (female or male, skin, hair, hair colour, top, bottoms, hat, extra), saved in your browser.
+- The explorer is the same smooth 3D model as the start.ng character creator, with running, jumping, climbing and two pistols.
 
 ## Project layout
 ```
 index.html        the built game: ONE self-contained file (this is what start.ng serves)
 app.html          the page the build starts from
-src/tomb/         game code (level, rules, explorer model, effects)
+src/tomb/         game code (level, rules, character model and creator, effects)
 src/shared/       input, sound, customizer, user styles
 tools/build.mjs   bundles everything into index.html
 ```
@@ -36,7 +38,7 @@ npm run build      # writes index.html
 Needs Node 18 or newer.
 
 ## Put it on start.ng
-`index.html` must be at the top of the repo or upload folder. It makes no outside requests and has no secrets, so it passes the start.ng checks (static files only). Upload it as `relichunter/index.html` and it appears at `relichunter.start.ng`.
+`index.html` must be at the top of the repo or upload folder. It has no secrets and needs no server (static files only), so it passes the start.ng checks. The only outside request is to start.ng itself, to find out who is signed in. Upload it as `relichunter/index.html` and it appears at `relichunter.start.ng`.
 
-## Login and scores (later)
-Sign-in and high scores will use the start.ng API. The only setting is `VITE_START_API_URL` (a public address, see `.env.example`). Never commit `.env` files.
+## Sign-in
+Nothing to set up: the game finds start.ng from its own address (`*.start.ng` → `https://start.ng`; for local testing, `*.start.localhost` → `http://localhost:5173`). Never commit `.env` files.

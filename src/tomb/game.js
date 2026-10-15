@@ -1,7 +1,7 @@
 // Relic Hunter rules: platforming physics, climbing, traps, enemies, pickups, doors and the boulder chase.
 // Nothing in here touches the DOM; it reports to the UI through `hooks`.
 import * as THREE from 'three';
-import { buildExplorer } from './explorer.js';
+import { buildHuman } from './human.js';
 import { lerpAngle, tone, noise } from '../shared/engine.js';
 
 const V = THREE.Vector3;
@@ -59,8 +59,8 @@ export function createGame({ scene, level, fx, hooks }) {
   // ------------------------------------------------------------ player
   let P = null;
   G.setupPlayer = (style) => {
-    if (P) scene.remove(P.root);
-    const human = buildExplorer(style);
+    if (P) { scene.remove(P.root); P.human.dispose(); }
+    const human = buildHuman(style);
     human.parts.handR.add(pistol());
     human.parts.handL.add(pistol());
     scene.add(human.root);

@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { buildHuman } from './humanoid.js';
-import { SKINS, HAIRS, HAIR_COLORS, OUTFITS, saveLocalUser } from './user.js';
 import './shared.css';
 
 export const $ = (id) => document.getElementById(id);
@@ -170,102 +168,6 @@ export function createDialogue() {
 }
 
 // ---------------------------------------------------------------- character picker with live 3D preview
-export function mountCustomizer(host, user, humanOpts = {}) {
-  host.innerHTML = `
-    <div class="pick">
-      <canvas id="pv"></canvas>
-      <div class="ctrls">
-        <div class="row"><label>Name</label><input type="text" id="pvName" maxlength="14" placeholder="Your name"></div>
-        <div class="row"><label>Skin</label><div class="opts" id="pvSkin"></div></div>
-        <div class="row"><label>Hair</label><div class="opts" id="pvHair"></div></div>
-        <div class="row"><label>Colour</label><div class="opts" id="pvHairC"></div></div>
-        <div class="row"><label>Outfit</label><div class="opts" id="pvOutfit"></div></div>
-      </div>
-    </div>`;
-  const canvas = host.querySelector('#pv');
-  const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  r.setPixelRatio(Math.min(devicePixelRatio, 2));
-  const sc = new THREE.Scene();
-  const cam = new THREE.PerspectiveCamera(30, 150 / 210, 0.1, 50);
-  cam.position.set(0, humanOpts.camY || 1.5, humanOpts.camZ || 7.2);
-  cam.lookAt(0, humanOpts.lookY || 1.15, 0);
-  sc.add(new THREE.HemisphereLight('#ffffff', '#6a5a8a', 1.5));
-  const key = new THREE.DirectionalLight('#fff0d8', 2.2);
-  key.position.set(3, 5, 6);
-  sc.add(key);
-  let human = null;
-
-  function rebuild() {
-    if (human) sc.remove(human.root);
-    human = (humanOpts.builder || buildHuman)({ ...humanOpts, ...user.style });
-    human.root.rotation.y = 0.5;
-    if (humanOpts.decorate) humanOpts.decorate(human);
-    sc.add(human.root);
-  }
-  rebuild();
-
-  const fill = (id, items, key2, render) => {
-    const el = host.querySelector(id);
-    el.innerHTML = '';
-    items.forEach((v) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      render(b, v);
-      b.addEventListener('click', () => {
-        user.style[key2] = v;
-        saveLocalUser(user);
-        refresh();
-        rebuild();
-      });
-      b.dataset.v = v;
-      el.appendChild(b);
-    });
-    return el;
-  };
-  const sw = (b, v) => { b.className = 'sw'; b.style.background = v; b.setAttribute('aria-label', v); };
-  const opt = (b, v) => { b.className = 'opt'; b.textContent = v; };
-  const els = {
-    skin: fill('#pvSkin', SKINS, 'skin', sw),
-    hair: fill('#pvHair', HAIRS, 'hair', opt),
-    hairColor: fill('#pvHairC', HAIR_COLORS, 'hairColor', sw),
-    outfit: fill('#pvOutfit', OUTFITS, 'outfit', sw),
-  };
-  function refresh() {
-    for (const [k, el] of Object.entries(els)) for (const b of el.children) b.classList.toggle('on', b.dataset.v === user.style[k]);
-  }
-  refresh();
-  const nameEl = host.querySelector('#pvName');
-  nameEl.value = user.name === 'Guest' ? '' : user.name;
-  nameEl.addEventListener('input', () => { user.name = nameEl.value.trim().slice(0, 14) || 'Guest'; saveLocalUser(user); });
-  nameEl.addEventListener('keydown', (e) => e.stopPropagation());
-
-  let raf = 0, last = performance.now(), alive = true;
-  function loop(now) {
-    if (!alive) return;
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    if (w && (canvas.width !== Math.floor(w * r.getPixelRatio()) || canvas.height !== Math.floor(h * r.getPixelRatio()))) {
-      r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
-    }
-    human.root.rotation.y += dt * 0.7;
-    human.update(dt, 0, humanOpts.pose || {});
-    r.render(sc, cam);
-    raf = requestAnimationFrame(loop);
-  }
-  raf = requestAnimationFrame(loop);
-
-  return {
-    setHidden(hidden) {
-      alive = !hidden;
-      if (alive) { last = performance.now(); raf = requestAnimationFrame(loop); } else cancelAnimationFrame(raf);
-    },
-    hideControls() { host.querySelector('.ctrls').style.display = 'none'; },
-    rebuild,
-    attach(prop) { human.parts.handR.add(prop); },
-  };
-}
-
-// ---------------------------------------------------------------- base renderer
 export function createStage({ fog = '#0d1030', near = 30, far = 95, fov = 50 } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));

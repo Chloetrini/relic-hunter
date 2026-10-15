@@ -49,6 +49,28 @@
   .cz-opt.on, .cz-seg button.on { border-color: var(--gold); color: #1a120a; background: var(--gold); }
   .cz-seg { display: flex; gap: 0; }
   .cz-seg button { flex: 1; font-size: 13px; letter-spacing: .2em; text-transform: uppercase; }
+  /* opening screen */
+  #rh-gate { z-index: 20; display: grid; place-items: center; text-align: center; padding: 24px;
+             background: radial-gradient(ellipse 60% 55% at 50% 52%, #13252b 0%, #0a1316 55%, #050809 100%); }
+  .gate-col { display: grid; justify-items: center; width: 100%; }
+  /* tall, tight capitals: drawn the same on every computer (no font download) */
+  .gate-title { margin: 0 0 74px; font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 700; white-space: nowrap;
+                font-size: clamp(34px, 7.4vw, 96px); line-height: 1; letter-spacing: .14em; padding-left: .14em; color: #f4f0e3;
+                transform: scale(.82, 1.45); transform-origin: center; }
+  #rh-gate .gate-label, #rh-gate .gate-welcome, #rh-gate .gate-enter, #rh-gate .gate-guest, #rh-gate .gate-note, #rh-gate .gate-input { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .gate-label { font-size: 11px; letter-spacing: .38em; text-transform: uppercase; color: rgba(244,240,227,.45); margin-bottom: 14px; }
+  .gate-welcome { font-size: 20px; letter-spacing: .08em; color: #f4f0e3; margin-bottom: 22px; }
+  #rh-gate .gate-input { width: min(316px, 100%); padding: 13px 16px; margin-bottom: 14px; text-align: center; font-size: 18px; letter-spacing: .06em; color: #f4f0e3;
+                background: rgba(255,255,255,.035); border: 1px solid #3f8ea3; outline: none; }
+  #rh-gate .gate-input:focus { border-color: #6fc3d6; box-shadow: 0 0 0 3px rgba(63,142,163,.18); }
+  #rh-gate .gate-input.shake { animation: gateShake .35s; }
+  @keyframes gateShake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .gate-enter { padding: 12px 26px; font-size: 13px; letter-spacing: .38em; text-transform: uppercase; color: #0a1316; background: #f4f0e3; border: 0; cursor: pointer; }
+  .gate-enter:hover { background: #fff; }
+  .gate-guest { margin-top: 18px; padding: 2px; font-size: 11px; letter-spacing: .2em; color: rgba(244,240,227,.55); background: none; border: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .gate-guest:hover { color: #f4f0e3; }
+  .gate-note { margin: 38px 0 0; max-width: 360px; font-size: 11px; line-height: 1.7; color: rgba(244,240,227,.5); }
+  .gate-note a { color: rgba(244,240,227,.8); }
   .rh-drawer-head button { background: none; border: 1px solid var(--gold); color: var(--gold); padding: 6px 16px; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; }
   html body .pick { flex-direction: column; align-items: stretch; }
   html body .pick canvas { width: 100%; height: 240px; border-radius: 0; background: radial-gradient(circle at 50% 40%, rgba(226,193,120,.18), transparent 70%); }
@@ -114,7 +136,19 @@
 </head>
 <body>
 
-<div id="rh-title" class="rh-screen">
+<div id="rh-gate" class="rh-screen">
+  <div class="gate-col">
+    <h1 class="gate-title">RELIC HUNTER</h1>
+    <label class="gate-label" for="gateName" id="gateLabel">Your name</label>
+    <div class="gate-welcome" id="gateWelcome" hidden></div>
+    <input id="gateName" class="gate-input" type="text" maxlength="24" autocomplete="nickname" spellcheck="false">
+    <button id="gateEnter" class="gate-enter">Enter the temple</button>
+    <button id="gateGuest" class="gate-guest">play as guest</button>
+    <p class="gate-note" id="gateNote"></p>
+  </div>
+</div>
+
+<div id="rh-title" class="rh-screen" hidden>
   <div class="rh-title-col">
     <div class="rh-eyebrow">An expedition into the Lost Temple</div>
     <h1 class="rh-logo">RELIC<br>HUNTER</h1>
@@ -153,7 +187,7 @@
 
 <div id="rh-end" class="rh-screen rh-end" hidden>
   <div class="rh-end-col">
-    <div class="rh-eyebrow">Expedition complete</div>
+    <div class="rh-eyebrow" id="esEyebrow">Expedition complete</div>
     <h2>The idol is yours</h2>
     <dl class="rh-stats">
       <dt>Time</dt><dd id="esTime"></dd>

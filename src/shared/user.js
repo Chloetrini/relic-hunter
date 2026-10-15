@@ -54,7 +54,7 @@ function askStartng(home) {
   });
 }
 
-function readLocal() {
+export function readLocal() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY));
     if (raw && raw.style) return { name: String(raw.name || 'Explorer').slice(0, 24), style: cleanStyle(raw.style), source: 'local' };

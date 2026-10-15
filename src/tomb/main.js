@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { loadUser } from '../shared/user.js';
+import { loadUser, readLocal, saveLocalUser, signInUrl } from '../shared/user.js';
 import { $, createInput, unlockAudio, tone, createStage } from '../shared/engine.js';
 import { createFx } from './fx.js';
 import { buildLevel } from './level.js';
@@ -66,6 +66,61 @@ async function main() {
   input.bindButton($('tUse'), 'use');
   renderer.domElement.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse' && e.button === 0) G.shoot(); });
 
+  // ---- opening screen: your name (or your start.ng account), then the menu
+  await new Promise((resolve) => {
+    const signedIn = user.source === 'startng';
+    const nameEl = $('gateName');
+    if (signedIn) {
+      $('gateLabel').textContent = 'Signed in with start.ng';
+      $('gateWelcome').hidden = false;
+      $('gateWelcome').textContent = `Welcome back, ${user.name}`;
+      nameEl.hidden = true;
+      $('gateNote').textContent = 'Your start.ng character and name come with you into the temple.';
+    } else {
+      nameEl.value = user.name === 'Explorer' ? '' : user.name;
+      $('gateNote').textContent = 'Your name appears on the menu and on the end screen when you escape with the idol.';
+      if (signInUrl()) {
+        const a = document.createElement('a');
+        a.href = signInUrl();
+        a.textContent = 'Sign in with start.ng';
+        $('gateNote').append(' ', a, ' to bring your own character.');
+      }
+      setTimeout(() => nameEl.focus(), 50);
+    }
+    const done = () => {
+      unlockAudio();
+      tone(147, 0.9, 'sine', 0.08, 196);
+      $('rh-gate').hidden = true;
+      $('rh-title').hidden = false;
+      resolve();
+    };
+    $('gateEnter').addEventListener('click', () => {
+      if (!signedIn) {
+        const name = nameEl.value.trim().slice(0, 24);
+        if (!name) {
+          nameEl.classList.remove('shake');
+          void nameEl.offsetWidth; // restart the shake
+          nameEl.classList.add('shake');
+          nameEl.focus();
+          return;
+        }
+        user.name = name;
+        saveLocalUser(user);
+      }
+      done();
+    });
+    $('gateGuest').addEventListener('click', () => {
+      Object.assign(user, readLocal(), { name: 'Guest', source: 'local' });
+      G.setupPlayer(user.style);
+      done();
+    });
+    nameEl.addEventListener('animationend', () => nameEl.classList.remove('shake'));
+    nameEl.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // typing here shouldn't move the explorer
+      if (e.key === 'Enter') $('gateEnter').click();
+    });
+  });
+
   // ---- title screen
   const playingAs = () => { $('rhPlayer').textContent = user.source === 'startng' ? `Playing as ${user.name} · start.ng` : `Playing as ${user.name}`; };
   playingAs();
@@ -91,6 +146,7 @@ async function main() {
     const isBest = !best || G.time < best;
     if (isBest) store.set('relichunter.best', String(G.time));
     const stars = 1 + (G.gems >= 10 ? 1 : 0) + (G.deaths <= 2 ? 1 : 0);
+    $('esEyebrow').textContent = `Expedition complete · ${user.name}`;
     $('esTime').textContent = fmt(G.time);
     $('esGems').textContent = `${G.gems} / ${level.totalGems}`;
     $('esDeaths').textContent = String(G.deaths);

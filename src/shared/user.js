@@ -1,57 +1,91 @@
-// Who is playing, and how they look.
+// Who is playing, how they look, and the shared leaderboard: through the start.ng API.
 //
-// On <game>.start.ng the game asks start.ng who is signed in, the way start.ng shares
-// the player with games: it loads start.ng/connect in a hidden iframe and posts
-// { type: 'startng:whoami', requestId }. start.ng answers { type: 'startng:user', requestId,
-// user: { id, name, style } | null }. Games never see the email or token.
-// Anywhere else (or if nobody is signed in) the player's own saved look is used.
+// Sign-in uses a start.ng game session: "Sign in with start.ng" opens start.ng/?return_to=<this game>,
+// and start.ng sends the player back with #startng_session=... (a key that only works for this game,
+// for a couple of hours, and is never their sign-in). The game sends it as "Authorization: Bearer ...".
+// Without a session (not signed in, or not on start.ng) the player's own saved look is used.
 //
-// Returns { name, style, source: 'startng' | 'local' }.
+// Returns { id?, name, style, source: 'startng' | 'local' }.
+// Leaderboard: this game's startng.json lists its stats (gems, then time). A signed-in player's run
+// goes to start.ng's database; a personal best time stays in this browser.
 
 import { cleanStyle, DEFAULT_STYLE } from '../tomb/character.js';
 
 const KEY = 'relichunter.player';
-const TIMEOUT_MS = 3000;
+const SESSION = 'relichunter.startng_session';
+const GAME = location.hostname.split('.')[0]; // relic-hunter on relic-hunter.start.ng
 
-/** start.ng's address for this game, or null when not running on start.ng. */
-export function startngHome() {
-  const { protocol, hostname, port } = location;
-  if (hostname.endsWith('.start.ng')) return 'https://start.ng';
-  // local testing: game on <name>.start.localhost, start.ng app on localhost:5173
-  if (hostname.endsWith('.start.localhost')) return `${protocol}//localhost:5173`;
-  void port;
+/** start.ng and its API for this game, or null when not running on start.ng. */
+function addresses() {
+  const { hostname } = location;
+  if (hostname.endsWith('.start.ng')) return { home: 'https://start.ng', api: 'https://api.start.ng' };
+  // local testing: game on <name>.start.localhost, start.ng on localhost:5173, API on localhost:8000
+  if (hostname.endsWith('.start.localhost')) return { home: 'http://localhost:5173', api: 'http://localhost:8000' };
   return null;
 }
 
-/** Link that sends the player to sign in on start.ng and back here afterwards. */
-export function signInUrl() {
-  const home = startngHome();
-  return home ? `${home}/?return_to=${encodeURIComponent(location.href)}` : null;
+export function startngHome() {
+  return addresses()?.home ?? null;
 }
 
-function askStartng(home) {
-  return new Promise((resolve) => {
-    const requestId = Math.random().toString(36).slice(2);
-    const frame = document.createElement('iframe');
-    frame.src = `${home}/connect`;
-    frame.title = 'start.ng';
-    frame.style.display = 'none';
-    const done = (user) => {
-      clearTimeout(timer);
-      window.removeEventListener('message', onMessage);
-      frame.remove();
-      resolve(user);
-    };
-    const onMessage = (e) => {
-      if (e.origin !== new URL(home).origin) return;
-      if (e.data?.type !== 'startng:user' || e.data.requestId !== requestId) return;
-      done(e.data.user || null);
-    };
-    const timer = setTimeout(() => done(null), TIMEOUT_MS);
-    window.addEventListener('message', onMessage);
-    frame.addEventListener('load', () => frame.contentWindow.postMessage({ type: 'startng:whoami', requestId }, home));
-    document.body.appendChild(frame);
-  });
+/** "Sign in with start.ng": signs in on start.ng, then comes back here with a game session. */
+export function signInUrl() {
+  const a = addresses();
+  return a ? `${a.home}/?return_to=${encodeURIComponent(location.origin + location.pathname + location.search)}` : null;
+}
+
+// Pick up a session start.ng just handed over, keep it for this tab, and clean the address bar.
+(function takeSession() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const session = params.get('startng_session');
+  if (!session) return;
+  try { sessionStorage.setItem(SESSION, session); } catch { /* storage blocked */ }
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+
+function session() {
+  try { return sessionStorage.getItem(SESSION); } catch { return null; }
+}
+
+/** Forget the session (playing as guest, or it expired). */
+export function dropSession() {
+  try { sessionStorage.removeItem(SESSION); } catch { /* ignore */ }
+}
+
+async function api(path, options = {}) {
+  const a = addresses();
+  if (!a) return null;
+  const headers = { ...(options.headers || {}) };
+  if (options.auth) {
+    if (!session()) return { status: 401, data: null };
+    headers.Authorization = `Bearer ${session()}`;
+  }
+  if (options.body) headers['Content-Type'] = 'application/json';
+  try {
+    const res = await fetch(`${a.api}/games/${GAME}${path}`, { method: options.method || 'GET', headers, body: options.body && JSON.stringify(options.body) });
+    if (res.status === 401) dropSession();
+    return { status: res.status, data: await res.json().catch(() => null) };
+  } catch {
+    return null; // start.ng can't be reached
+  }
+}
+
+/**
+ * Save a run to the shared leaderboard: { gems, time } (time in whole seconds).
+ * Returns { ok: true, best, improved, rank, stats } or { ok: false, error, signIn? }.
+ */
+export async function submitRun(stats) {
+  const res = await api('/scores', { method: 'POST', auth: true, body: { stats } });
+  if (!res) return { ok: false, error: "Couldn't reach start.ng" };
+  if (res.status === 401) return { ok: false, signIn: true, error: 'Sign in with start.ng to save your run' };
+  if (res.status !== 200) return { ok: false, error: res.data?.detail || "Couldn't save your run" };
+  return { ok: true, ...res.data };
+}
+
+/** The shared leaderboard: [{ rank, player_id, name, color, stats: { gems, time } }], or null. */
+export async function getLeaderboard(limit = 10) {
+  const res = await api(`/leaderboard?limit=${limit}`);
+  return res && res.status === 200 ? res.data : null;
 }
 
 export function readLocal() {
@@ -68,10 +102,10 @@ export function saveLocalUser(user) {
 }
 
 export async function loadUser() {
-  const home = startngHome();
-  if (home) {
-    const u = await askStartng(home);
-    if (u && u.style) return { name: String(u.name || 'Player').slice(0, 24), style: cleanStyle(u.style), source: 'startng' };
+  if (session()) {
+    const res = await api('/player', { auth: true });
+    const u = res && res.status === 200 ? res.data : null;
+    if (u) return { id: u.id, name: String(u.name || 'Player').slice(0, 24), style: cleanStyle(u.style || {}), source: 'startng' };
   }
   return readLocal();
 }

@@ -1,0 +1,8 @@
+{
+  "leaderboard": {
+    "stats": [
+      { "key": "gems", "label": "Gems", "order": "highest" },
+      { "key": "time", "label": "Time", "order": "lowest", "format": "time" }
+    ]
+  }
+}

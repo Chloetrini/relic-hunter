@@ -67,6 +67,8 @@
   @keyframes gateShake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
   .gate-enter { padding: 12px 26px; font-size: 13px; letter-spacing: .38em; text-transform: uppercase; color: #0a1316; background: #f4f0e3; border: 0; cursor: pointer; }
   .gate-enter:hover { background: #fff; }
+  #rh-gate .gate-signin { margin-top: 12px; padding: 11px 24px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: #f4f0e3; border: 1px solid rgba(244,240,227,.5); text-decoration: none; }
+  #rh-gate .gate-signin:hover { border-color: #f4f0e3; background: rgba(255,255,255,.05); }
   .gate-guest { margin-top: 18px; padding: 2px; font-size: 11px; letter-spacing: .2em; color: rgba(244,240,227,.55); background: none; border: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   .gate-guest:hover { color: #f4f0e3; }
   .gate-note { margin: 38px 0 0; max-width: 360px; font-size: 11px; line-height: 1.7; color: rgba(244,240,227,.5); }
@@ -123,6 +125,19 @@
   .rh-stats { display: grid; grid-template-columns: 1fr auto; gap: 12px 30px; text-align: left; border-top: 1px solid rgba(226,193,120,.3); border-bottom: 1px solid rgba(226,193,120,.3); padding: 18px 4px; font-size: 18px; font-variant-numeric: tabular-nums; }
   .rh-stats dt { color: var(--dim); letter-spacing: .2em; text-transform: uppercase; font-size: 13px; align-self: center; }
   .rh-stats dd { margin: 0; text-align: right; }
+  /* shared start.ng leaderboard */
+  .rh-board { margin-top: 18px; width: min(380px, 88vw); }
+  .rh-board-end { margin: 6px auto 0; }
+  .rh-board-head { font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+  .rh-board-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
+  .rh-board-list li { display: grid; grid-template-columns: 28px 12px 1fr auto auto; gap: 12px; align-items: center; padding: 6px 8px; font-size: 16px; text-align: left; border-bottom: 1px solid rgba(226,193,120,.14); }
+  .rh-board-list li.me { background: rgba(226,193,120,.14); color: var(--gold); }
+  .rh-board-list .rk { color: var(--dim); font-size: 13px; }
+  .rh-board-list .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dim); }
+  .rh-board-list .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rh-board-list .st { text-align: right; white-space: nowrap; }
+  .rh-board-note { margin: 8px 0 0; font-size: 14px; color: var(--dim); }
+  .rh-board-note a { color: var(--gold); }
   .rh-stars { font-size: 34px; color: var(--gold); letter-spacing: .3em; margin: 22px 0 8px; }
   .rh-end .rh-menu { justify-items: center; margin-top: 18px; }
 
@@ -143,6 +158,7 @@
     <div class="gate-welcome" id="gateWelcome" hidden></div>
     <input id="gateName" class="gate-input" type="text" maxlength="24" autocomplete="nickname" spellcheck="false">
     <button id="gateEnter" class="gate-enter">Enter the temple</button>
+    <a id="gateSignin" class="gate-signin" hidden>Sign in with start.ng</a>
     <button id="gateGuest" class="gate-guest">play as guest</button>
     <p class="gate-note" id="gateNote"></p>
   </div>
@@ -157,7 +173,13 @@
       <button class="primary" id="rhStart">Begin expedition</button>
       <button id="rhCustom">Customize explorer</button>
       <button id="rhHow">How to play</button>
+      <button id="rhBoardBtn">Leaderboard</button>
     </nav>
+    <div class="rh-board" id="rhBoard" hidden>
+      <div class="rh-board-head">Top explorers · most gems, then fastest</div>
+      <ol class="rh-board-list" id="rhBoardList"></ol>
+      <p class="rh-board-note" id="rhBoardNote"></p>
+    </div>
     <div class="rh-player" id="rhPlayer"></div>
     <div class="rh-howto" id="rhHowto" hidden>
       <b>Move</b> WASD or arrows &nbsp;·&nbsp; <b>Jump</b> Space &nbsp;·&nbsp; <b>Fire</b> J or click &nbsp;·&nbsp; <b>Use</b> E<br>
@@ -196,6 +218,11 @@
       <dt>Best time</dt><dd id="esBest"></dd>
     </dl>
     <div class="rh-stars" id="esStars"></div>
+    <p class="rh-board-note" id="esScoreNote"></p>
+    <div class="rh-board rh-board-end" id="esBoard" hidden>
+      <div class="rh-board-head">Top explorers on start.ng</div>
+      <ol class="rh-board-list" id="esBoardList"></ol>
+    </div>
     <nav class="rh-menu"><button class="primary" id="rhAgain">Play again</button></nav>
   </div>
 </div>

@@ -17,6 +17,7 @@ Plain browser game: no backend, no accounts needed. Just open `index.html`.
 - Collect 15 gems and 3 keys. The keys open the vault.
 - Taking the idol wakes the boulder. Run back through the vault door to win.
 - Checkpoints save your place. Your best time is kept in your browser.
+- **Shared start.ng leaderboard:** `startng.json` declares it (most **gems**, then fastest **time**). "Sign in with start.ng" goes to start.ng and comes back with a game session; your run is then sent to the start.ng API (`POST /games/relic-hunter/scores`) and every player sees the same top 10, on the end screen, under "Leaderboard" in the menu, and on start.ng.
 - **Your start.ng character plays the game.** On `relichunter.start.ng`, the game asks start.ng who is signed in (through start.ng's `/connect`) and uses that player's character and name. Games never see the email or token.
 - Not signed in? "Customize explorer" has the same options as start.ng (female or male, skin, hair, hair colour, top, bottoms, hat, extra), saved in your browser.
 - The explorer is the same smooth 3D model as the start.ng character creator, with running, jumping, climbing and two pistols.

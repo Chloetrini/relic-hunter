@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { loadUser, readLocal, saveLocalUser, signInUrl } from '../shared/user.js';
+import { dropSession, getLeaderboard, loadUser, readLocal, saveLocalUser, signInUrl, startngHome, submitRun } from '../shared/user.js';
 import { $, createInput, unlockAudio, tone, createStage } from '../shared/engine.js';
 import { createFx } from './fx.js';
 import { buildLevel } from './level.js';
@@ -80,6 +80,10 @@ async function main() {
       nameEl.value = user.name === 'Explorer' ? '' : user.name;
       $('gateNote').textContent = 'Your name appears on the menu and on the end screen when you escape with the idol.';
       if (signInUrl()) {
+        $('gateSignin').hidden = false;
+        $('gateSignin').href = signInUrl();
+      }
+      if (signInUrl()) {
         const a = document.createElement('a');
         a.href = signInUrl();
         a.textContent = 'Sign in with start.ng';
@@ -110,6 +114,7 @@ async function main() {
       done();
     });
     $('gateGuest').addEventListener('click', () => {
+      dropSession();
       Object.assign(user, readLocal(), { name: 'Guest', source: 'local' });
       G.setupPlayer(user.style);
       done();
@@ -128,6 +133,39 @@ async function main() {
   $('rhCustom').addEventListener('click', () => { $('rhDrawer').hidden = false; custom.setHidden(false); });
   $('rhClose').addEventListener('click', () => { $('rhDrawer').hidden = true; custom.setHidden(true); G.setupPlayer(user.style); });
   $('rhHow').addEventListener('click', () => { $('rhHowto').hidden = !$('rhHowto').hidden; });
+  $('rhBoardBtn').addEventListener('click', async () => {
+    const panel = $('rhBoard');
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) await showBoard($('rhBoardList'), $('rhBoardNote'));
+  });
+
+  // ---- shared start.ng leaderboard (scores live in start.ng's database, through its API)
+  async function showBoard(listEl, noteEl) {
+    listEl.innerHTML = '';
+    if (!startngHome()) {
+      if (noteEl) noteEl.textContent = 'The leaderboard is on relic-hunter.start.ng.';
+      return false;
+    }
+    if (noteEl) noteEl.textContent = 'Loading...';
+    const entries = await getLeaderboard(10);
+    if (!entries) { if (noteEl) noteEl.textContent = "Couldn't load the leaderboard."; return false; }
+    if (noteEl) noteEl.textContent = entries.length ? '' : 'No scores yet. Be the first to escape with the idol.';
+    for (const e of entries) {
+      const li = document.createElement('li');
+      if (user.source === 'startng' && e.player_id === user.id) li.className = 'me';
+      const rk = Object.assign(document.createElement('span'), { className: 'rk', textContent: `#${e.rank}` });
+      const dot = Object.assign(document.createElement('span'), { className: 'dot' });
+      if (e.color) dot.style.background = e.color;
+      const nm = Object.assign(document.createElement('span'), { className: 'nm', textContent: e.name });
+      const gems = Object.assign(document.createElement('span'), { className: 'st', textContent: `${e.stats?.gems ?? '–'} gems` });
+      const time = Object.assign(document.createElement('span'), { className: 'st', textContent: e.stats?.time == null ? '–' : fmt(e.stats.time) });
+      li.append(rk, dot, nm, gems, time);
+      listEl.appendChild(li);
+    }
+    return entries.length > 0;
+  }
+
+  // This game's leaderboard (startng.json): most gems wins, then the fastest time.
   $('rhStart').addEventListener('click', () => {
     unlockAudio();
     custom.setHidden(true);
@@ -140,6 +178,30 @@ async function main() {
   });
   $('rhAgain').addEventListener('click', () => location.reload());
 
+  // Signed-in players: save the run to the shared leaderboard, then show it. Others: it stays here.
+  async function shareRun(stats) {
+    const note = $('esScoreNote');
+    note.textContent = '';
+    if (user.source !== 'startng') {
+      if (signInUrl()) {
+        const a = Object.assign(document.createElement('a'), { href: signInUrl(), textContent: 'Sign in with start.ng' });
+        note.append(a, ' to put your run on the leaderboard.');
+      }
+      return;
+    }
+    note.textContent = 'Saving your run...';
+    const res = await submitRun(stats);
+    if (!res.ok) {
+      note.textContent = res.error || "Couldn't save your run.";
+      if (res.signIn && signInUrl()) note.append(' ', Object.assign(document.createElement('a'), { href: signInUrl(), textContent: 'Sign in again' }));
+      return;
+    }
+    note.textContent = res.improved
+      ? `New best! You're #${res.rank} on start.ng.`
+      : `#${res.rank} on start.ng · your best: ${res.stats.gems} gems in ${fmt(res.stats.time)}.`;
+    $('esBoard').hidden = !(await showBoard($('esBoardList'), null));
+  }
+
   function showEnd() {
     $('rh-hud').hidden = true;
     const best = Number(store.get('relichunter.best') || 0);
@@ -147,6 +209,7 @@ async function main() {
     if (isBest) store.set('relichunter.best', String(G.time));
     const stars = 1 + (G.gems >= 10 ? 1 : 0) + (G.deaths <= 2 ? 1 : 0);
     $('esEyebrow').textContent = `Expedition complete · ${user.name}`;
+    shareRun({ gems: G.gems, time: Math.round(G.time) });
     $('esTime').textContent = fmt(G.time);
     $('esGems').textContent = `${G.gems} / ${level.totalGems}`;
     $('esDeaths').textContent = String(G.deaths);

@@ -1,0 +1,69 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1030; font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif; color: #fff; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas.game { display: block; position: fixed; inset: 0; }
+
+.hud { position: fixed; inset: 0; pointer-events: none; font-weight: 800; text-shadow: 0 2px 0 rgba(0,0,0,.55); z-index: 5; }
+.hud.hidden { display: none; }
+.hud .top { position: absolute; top: 12px; left: 16px; right: 16px; display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.hud .title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent, #ffcf6b); }
+.hud .obj { font-size: 22px; line-height: 1.15; }
+.hud .right { text-align: right; font-size: 15px; }
+.bars { position: absolute; left: 16px; bottom: 16px; width: min(300px, 48vw); display: grid; gap: 7px; }
+.bar { height: 17px; background: rgba(0,0,0,.5); border: 2px solid rgba(255,255,255,.9); border-radius: 9px; overflow: hidden; position: relative; }
+.bar i { position: absolute; inset: 0 auto 0 0; width: 100%; transition: width .08s linear; }
+.bar b { position: absolute; left: 8px; top: -1px; font-size: 11px; line-height: 17px; letter-spacing: .6px; }
+.toast { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); font-size: 26px; font-weight: 800; text-shadow: 0 3px 0 rgba(0,0,0,.6); opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 6; text-align: center; padding: 0 16px; }
+.toast.show { opacity: 1; }
+
+.panel { position: fixed; inset: 0; display: flex; padding: 14px; background: rgba(8,6,24,.55); overflow: auto; z-index: 10; }
+.panel.hidden { display: none; }
+.card { background: var(--card, #241a45); border: 3px solid var(--accent, #ffcf6b); border-radius: 22px; box-shadow: 0 8px 0 var(--accent, #ffcf6b); padding: 20px; width: min(460px, 100%); color: #fff; text-align: center; margin: auto; }
+.card.wide { width: min(720px, 100%); }
+.card h1 { margin: 0; font-size: 40px; letter-spacing: -1px; color: var(--accent, #ffcf6b); line-height: 1.05; }
+.card h2 { margin: 0 0 6px; font-size: 26px; color: var(--accent, #ffcf6b); }
+.card p { margin: 8px 0 12px; color: #d9d0f2; line-height: 1.45; }
+.sub { font-size: 14px; letter-spacing: 3px; text-transform: uppercase; color: #bfb3e6; margin-bottom: 4px; }
+.go { margin-top: 12px; width: 100%; border: 3px solid #fff; background: var(--btn, #e4572e); color: #fff; border-radius: 14px; padding: 12px; font: inherit; font-size: 21px; font-weight: 800; cursor: pointer; box-shadow: 0 5px 0 rgba(0,0,0,.4); }
+.go:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.4); }
+.go.alt { background: transparent; font-size: 15px; padding: 8px; box-shadow: none; border-color: var(--accent, #ffcf6b); color: var(--accent, #ffcf6b); }
+.hint { font-size: 12px; margin-top: 12px; color: #b5a9dc; line-height: 1.55; }
+.big { font-size: 60px; font-weight: 800; margin: 4px 0 0; color: var(--accent, #ffcf6b); }
+
+/* character picker */
+.pick { display: flex; gap: 14px; align-items: center; text-align: left; margin-top: 10px; }
+.pick canvas { width: 150px; height: 210px; flex: none; border-radius: 16px; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.18), rgba(0,0,0,.25)); }
+.pick .ctrls { flex: 1; min-width: 0; }
+.row { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
+.row label { width: 48px; font-weight: 800; font-size: 12px; color: var(--accent, #ffcf6b); text-transform: uppercase; letter-spacing: .5px; }
+.opts { display: flex; flex-wrap: wrap; gap: 5px; }
+.opt { border: 2px solid var(--accent, #ffcf6b); background: transparent; border-radius: 9px; padding: 4px 8px; font: inherit; font-size: 12px; cursor: pointer; color: #fff; }
+.opt.on { background: var(--accent, #ffcf6b); color: #1d1536; font-weight: 800; }
+.sw { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,.7); cursor: pointer; }
+.sw.on { outline: 3px solid #fff; outline-offset: 2px; }
+input[type=text] { flex: 1; border: 2px solid var(--accent, #ffcf6b); background: #150f2e; border-radius: 9px; padding: 6px 9px; font: inherit; color: #fff; min-width: 0; }
+@media (max-width: 460px) { .pick { flex-direction: column; } .pick canvas { width: 130px; height: 170px; } }
+
+/* dialogue */
+.dlg { position: fixed; left: 0; right: 0; bottom: 0; padding: 14px; display: none; z-index: 12; justify-content: center; }
+.dlg.show { display: flex; }
+.dlg .box { width: min(760px, 100%); background: rgba(24,16,48,.95); border: 3px solid var(--accent, #ffcf6b); border-radius: 18px; padding: 14px 18px 12px; box-shadow: 0 6px 0 rgba(0,0,0,.4); }
+.dlg .who { font-weight: 800; color: var(--accent, #ffcf6b); letter-spacing: 1px; font-size: 14px; text-transform: uppercase; }
+.dlg .txt { font-size: 19px; line-height: 1.45; min-height: 3.2em; margin-top: 4px; }
+.dlg .nx { text-align: right; font-size: 12px; color: #b5a9dc; }
+.curtain { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s; z-index: 11; }
+.curtain.on { opacity: .55; }
+
+/* touch controls */
+.touch { position: fixed; right: 14px; bottom: 16px; display: none; gap: 12px; align-items: flex-end; z-index: 7; }
+.touch button { width: 78px; height: 78px; border-radius: 50%; border: 3px solid #fff; background: rgba(228,87,46,.82); color: #fff; font: inherit; font-weight: 800; font-size: 13px; touch-action: none; }
+.touch button.b2 { background: rgba(255,207,107,.88); color: #1d1536; }
+.touch button.down { filter: brightness(1.3); transform: scale(.94); }
+#joy { position: fixed; width: 110px; height: 110px; margin: -55px 0 0 -55px; border: 3px solid rgba(255,255,255,.7); border-radius: 50%; display: none; pointer-events: none; z-index: 7; }
+#joy i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: rgba(255,255,255,.75); }
+@media (pointer: coarse) { .touch { display: flex; } .bars { bottom: 112px; } }
+
+.charms { display: grid; gap: 10px; margin-top: 12px; }
+.charm { text-align: left; border: 3px solid var(--accent, #ffcf6b); background: #1b1238; color: #fff; border-radius: 14px; padding: 10px 14px; font: inherit; cursor: pointer; }
+.charm:hover { background: #2c1d58; }
+.charm b { display: block; font-size: 18px; color: var(--accent, #ffcf6b); }
+.charm span { font-size: 14px; color: #d9d0f2; }

@@ -1,0 +1,16 @@
+{
+  "name": "relic-hunter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Relic Hunter: a 3D tomb-raiding adventure (three.js). Static game for start.ng.",
+  "scripts": {
+    "build": "node tools/build.mjs"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

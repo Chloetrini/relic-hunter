@@ -1,51 +1,43 @@
 // The temple: three rooms laid out along -z. Every solid block is both a mesh and a collider.
 import * as THREE from 'three';
+import { stoneWall, stoneFloor, rock, flame as flameTex, glow as glowTex } from './textures.js';
 
 const PI = Math.PI;
 
-function canvasTex(draw, size = 256) {
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  draw(c.getContext('2d'), size);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return t;
+// A box whose texture keeps the same real size on every face (one tile = `tile` units), so long
+// floors and tall walls aren't stretched.
+export function boxGeo(w, h, d, tile = 2.5) {
+  const g = new THREE.BoxGeometry(w, h, d);
+  const uv = g.attributes.uv;
+  const size = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];   // +x -x +y -y +z -z
+  for (let f = 0; f < 6; f++) for (let k = 0; k < 4; k++) {
+    const i = f * 4 + k;
+    uv.setXY(i, uv.getX(i) * size[f][0] / tile, uv.getY(i) * size[f][1] / tile);
+  }
+  return g;
 }
-const TEX = {
-  wall: () => canvasTex((g, s) => {
-    g.fillStyle = '#8a6e4e'; g.fillRect(0, 0, s, s);
-    for (let r = 0; r < 8; r++) for (let c = 0; c < 4; c++) {
-      const x = c * 64 + (r % 2 ? 32 : 0), y = r * 32;
-      g.fillStyle = ['#94785a', '#7f6447', '#8c7052', '#9a7e5e'][(r * 3 + c) % 4];
-      g.fillRect(x + 2, y + 2, 60, 28);
-    }
-    g.fillStyle = 'rgba(40,60,30,.35)';
-    for (let i = 0; i < 30; i++) { g.beginPath(); g.arc(Math.random() * s, s - Math.random() * 60, 4 + Math.random() * 10, 0, PI * 2); g.fill(); }
-  }),
-  floor: () => canvasTex((g, s) => {
-    g.fillStyle = '#6e5a44'; g.fillRect(0, 0, s, s);
-    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
-      g.fillStyle = ['#7a654c', '#715d46', '#806a50'][(r + c * 2) % 3];
-      g.fillRect(c * 64 + 2, r * 64 + 2, 60, 60);
-    }
-  }),
-};
 
 export function buildLevel(scene) {
   const L = { solids: [], gems: [], keys: [], spikes: [], blades: [], torches: [], doors: {} };
-  const base = { wall: TEX.wall(), floor: TEX.floor() };
+  const base = { wall: stoneWall(), floor: stoneFloor(), rock: rock() };
+  L.tex = base;
 
+  // one material per size, sharing the textures (each with its own repeat)
+  const mats = new Map();
   function material(kind, rw, rh) {
-    const t = base[kind].clone();
-    t.repeat.set(Math.max(1, rw), Math.max(1, rh));
-    t.needsUpdate = true;
-    return new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 });
+    rw = Math.max(1, rw); rh = Math.max(1, rh);
+    const key = `${kind}|${rw}|${rh}`;
+    if (mats.has(key)) return mats.get(key);
+    const map = base[kind].map.clone(), normalMap = base[kind].normalMap.clone();
+    for (const t of [map, normalMap]) { t.repeat.set(rw, rh); t.needsUpdate = true; }
+    const m = new THREE.MeshStandardMaterial({ map, normalMap, normalScale: new THREE.Vector2(1.4, 1.4), roughness: 0.92, metalness: 0 });
+    mats.set(key, m);
+    return m;
   }
 
   function solid(x0, x1, y0, y1, z0, z1, kind = 'wall') {
     const w = x1 - x0, h = y1 - y0, d = z1 - z0;
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material(kind, Math.round(Math.max(w, d) / 2.5), Math.round(h / 2.5) || 1));
+    const m = new THREE.Mesh(boxGeo(w, h, d, kind === 'floor' ? 3 : 2.5), material(kind, 1, 1));
     m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
     m.castShadow = true; m.receiveShadow = true;
     scene.add(m);
@@ -83,11 +75,11 @@ export function buildLevel(scene) {
   // doors (move up when opened)
   const gate = solid(-6, 6, 0, 4.6, -34.6, -34);
   const vault = solid(-3.1, 3.1, 0, 4.6, -70.6, -70);
-  gate.mesh.material.color.set('#b9a27a'); vault.mesh.material.color.set('#c8a55a');
+  for (const [d, tint] of [[gate, '#d9c39a'], [vault, '#e8c77a']]) { d.mesh.material = d.mesh.material.clone(); d.mesh.material.color.set(tint); }
   L.doors = { gate: { s: gate, open: 0, opening: false }, vault: { s: vault, open: 0, opening: false } };
 
   // abyss below
-  const abyss = new THREE.Mesh(new THREE.PlaneGeometry(200, 200).rotateX(-PI / 2), new THREE.MeshBasicMaterial({ color: '#050302' }));
+  const abyss = new THREE.Mesh(new THREE.PlaneGeometry(200, 200).rotateX(-PI / 2), new THREE.MeshBasicMaterial({ color: '#0a0604' }));
   abyss.position.y = -14; scene.add(abyss);
 
   // ---------------- lever on the ledge
@@ -106,8 +98,8 @@ export function buildLevel(scene) {
   L.lever = { group: lever, handle, pos: new THREE.Vector3(3, 2.1, -24) };
 
   // ---------------- collectibles
-  const gemGeo = new THREE.OctahedronGeometry(0.28);
-  const gemMat = new THREE.MeshStandardMaterial({ color: '#3ad1c8', emissive: '#1a8c86', emissiveIntensity: 1.2, roughness: 0.2, metalness: 0.3 });
+  const gemGeo = new THREE.OctahedronGeometry(0.26, 0).scale(0.8, 1.45, 0.8);
+  const gemMat = new THREE.MeshStandardMaterial({ color: '#5ff5e6', emissive: '#19c6b8', emissiveIntensity: 1.6, roughness: 0.15, metalness: 0.1, flatShading: true });
   for (const [x, y, z] of [[0, 0, -2], [-3, 0, -5], [3, 0, -5], [0, 0, -11], [-3, 0, -18], [3, 0, -18], [0, 2.1, -24], [-2, 0, -30], [2, 0, -38], [0, 0, -45.7], [0, 0, -52], [0, 0, -58.5], [3, 0, -63], [-1.5, 0, -80], [1.5, 0, -85]]) {
     const m = new THREE.Mesh(gemGeo, gemMat);
     m.position.set(x, y + 0.8, z); m.castShadow = true;
@@ -127,11 +119,23 @@ export function buildLevel(scene) {
   // idol
   const idol = new THREE.Group();
   const gold = new THREE.MeshStandardMaterial({ color: '#ffcc3a', emissive: '#8a5a00', emissiveIntensity: 0.8, metalness: 0.9, roughness: 0.2 });
-  const ib = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 0.5, 10), gold); ib.position.y = 0.25; idol.add(ib);
-  const ih = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 12), gold); ih.position.y = 0.62; idol.add(ih);
+  const dark = new THREE.MeshStandardMaterial({ color: '#3a2508', metalness: 0.6, roughness: 0.5 });
+  const ib = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.24, 0.32, 12), gold); ib.position.y = 0.16; idol.add(ib);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.12, 12), gold); neck.position.y = 0.37; idol.add(neck);
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 16), gold); face.scale.set(0.9, 1.15, 0.85); face.position.y = 0.6; idol.add(face);
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.15, 0.12, 4, 1), gold); crown.rotation.y = PI / 4; crown.position.y = 0.82; idol.add(crown);
+  const plume = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.16, 4), gold); plume.position.y = 0.95; idol.add(plume);
+  for (const sx of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.022, 0.02), dark); eye.position.set(sx * 0.06, 0.64, 0.142); idol.add(eye);
+    const ear = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.06), gold); ear.position.set(sx * 0.165, 0.6, 0); idol.add(ear);
+  }
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.08, 0.05), gold); nose.position.set(0, 0.58, 0.15); idol.add(nose);
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.018, 0.02), dark); mouth.position.set(0, 0.5, 0.138); idol.add(mouth);
+  const eyeGlow = new THREE.MeshBasicMaterial({ color: '#7ff8ee' });
+  for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), eyeGlow); e.position.set(sx * 0.06, 0.64, 0.152); idol.add(e); }
   idol.position.set(0, 1, -90);
   scene.add(idol);
-  const idolLight = new THREE.PointLight('#ffcc66', 10, 6, 2);
+  const idolLight = new THREE.PointLight('#ffcc66', 14, 7, 2);
   idolLight.position.set(0, 2.2, -90); scene.add(idolLight);
   L.idol = { group: idol, pos: new THREE.Vector3(0, 1, -90), light: idolLight };
 
@@ -162,23 +166,48 @@ export function buildLevel(scene) {
     L.blades.push({ pivot, z, phase, len: 4.4 });
   }
 
-  // ---------------- torches
-  for (const [x, z] of [[-6.2, -6], [6.2, -20], [-6.2, -32], [6.2, -47], [-6.2, -63], [3, -83]]) {
+  // ---------------- fire bowls: stone stand, bronze bowl, layered flame sprites
+  const fireTex = flameTex(), glowT = glowTex();
+  const bowlMat = new THREE.MeshStandardMaterial({ color: '#6b4a24', metalness: 0.7, roughness: 0.45 });
+  for (const [x, z] of [[-5.6, -6], [5.6, -20], [-5.6, -32], [5.4, -38.5], [-5.6, -63], [2.5, -83], [-2.5, -76]]) {
     const g = new THREE.Group();
-    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.7, 6), new THREE.MeshStandardMaterial({ color: '#3a2a1a' }));
-    stick.rotation.z = x < 0 ? -0.4 : 0.4; g.add(stick);
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.45, 8), new THREE.MeshBasicMaterial({ color: '#ffb347' }));
-    flame.position.set(x < 0 ? 0.15 : -0.15, 0.5, 0); g.add(flame);
-    g.position.set(x, 3, z);
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 1.6, 8), material('wall', 1, 1));
+    stand.position.y = 0.8; stand.castShadow = true; stand.receiveShadow = true; g.add(stand);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.22, 0.3, 14, 1, true), bowlMat);
+    bowl.position.y = 1.75; bowl.material.side = THREE.DoubleSide; g.add(bowl);
+    const coals = new THREE.Mesh(new THREE.CircleGeometry(0.38, 14).rotateX(-PI / 2), new THREE.MeshBasicMaterial({ color: '#ff7a1a' }));
+    coals.position.y = 1.86; g.add(coals);
+    const flames = [];
+    for (let k = 0; k < 3; k++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: k ? '#ffb05a' : '#fff0c0', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+      sp.position.set((k - 1) * 0.12, 2.35, (k % 2) * 0.08);
+      sp.scale.set(0.55 - k * 0.08, 1.1 - k * 0.15, 1);
+      g.add(sp); flames.push(sp);
+    }
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT, color: '#ff8a2a', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.55 }));
+    halo.position.y = 2.2; halo.scale.setScalar(2.6); g.add(halo);
+    g.position.set(x, 0, z);
     scene.add(g);
-    const light = new THREE.PointLight('#ff9a3c', 22, 16, 2);
-    light.position.set(x < 0 ? x + 0.6 : x - 0.6, 3.6, z);
+    const light = new THREE.PointLight('#ff9440', 26, 15, 1.8);
+    light.position.set(x, 2.6, z);
     scene.add(light);
-    L.torches.push({ flame, light, seed: Math.random() * 10 });
+    // the stand is solid (you can't walk through it)
+    L.solids.push({ x0: x - 0.3, x1: x + 0.3, y0: 0, y1: 1.6, z0: z - 0.3, z1: z + 0.3, mesh: stand });
+    L.torches.push({ flame: flames[0], flames, halo, light, seed: Math.random() * 10, pos: new THREE.Vector3(x, 2.3, z) });
   }
 
   // ---------------- boulder
-  const boulder = new THREE.Mesh(new THREE.SphereGeometry(1.9, 24, 18), material('wall', 2, 2));
+  const bGeo = new THREE.IcosahedronGeometry(1.9, 4);
+  { // lumpy rock, not a perfect ball
+    const p = bGeo.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i);
+      const n = Math.sin(v.x * 2.1) * Math.sin(v.y * 2.7 + 1) * Math.sin(v.z * 1.9 + 2) * 0.09 + Math.sin(v.x * 6 + v.z * 5) * 0.025;
+      v.multiplyScalar(1 + n); p.setXYZ(i, v.x, v.y, v.z);
+    }
+    bGeo.computeVertexNormals();
+  }
+  const boulder = new THREE.Mesh(bGeo, material('rock', 2, 2));
   boulder.castShadow = true;
   boulder.visible = false;
   scene.add(boulder);

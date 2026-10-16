@@ -37,7 +37,8 @@ function curlyGeometry(r, amount) {
   g.computeVertexNormals();
   return g;
 }
-export function buildHuman(s) {
+export function buildHuman(s, opts = {}) {
+  const gear = !!opts.gear; // the game's explorer gear, worn over the player's own clothes and colours
   const female = s.body === "female";
   const geos = [];
   const mats = /* @__PURE__ */ new Map();
@@ -89,6 +90,20 @@ export function buildHuman(s) {
     knee.add(limb(0.056, 0.04, shinLen, bottoms, 0.012));
     const ankle = group(knee, 0, -shinLen, 0);
     ankle.add(ball(0.05, shoe, 0, -0.03, 0.045, 0.95, 0.72, 2.3));
+    if (gear) {
+      // laced boots up the shin, and a holster on the thigh
+      const boot = limb(0.05, 0.049, 0.16, shoe, 0.004);
+      boot.position.y = -(shinLen - 0.16);
+      knee.add(boot);
+      const cuff = mesh(new THREE.TorusGeometry(0.05, 0.01, 6, 16), mat(LEATHER, 0, 0.6), 0, -(shinLen - 0.165), 0);
+      cuff.rotation.x = PI / 2;
+      knee.add(cuff);
+      const holster = mesh(new THREE.BoxGeometry(0.045, 0.15, 0.075), mat("#3b2716", 0, 0.6), side * 0.085, -0.17, 0.01);
+      hip.add(holster);
+      const strap = mesh(new THREE.TorusGeometry(0.082, 0.009, 6, 18), mat(LEATHER, 0, 0.6), 0, -0.2, 0);
+      strap.rotation.x = PI / 2; strap.scale.set(1.05, 0.95, 1);
+      hip.add(strap);
+    }
     legs.push({ hip, knee });
   }
   const spine = group(hips, 0, 0.03, 0);
@@ -106,7 +121,15 @@ export function buildHuman(s) {
     sh.add(ball(female ? 0.054 : 0.062, top, 0, -0.012, 0, 1, 1, 0.92));
     sh.add(limb(female ? 0.045 : 0.052, 0.037, 0.29, skin, 4e-3));
     sh.add(limb(female ? 0.058 : 0.067, female ? 0.051 : 0.058, 0.11, top));
+    if (gear) sh.add(limb(female ? 0.05 : 0.057, 0.042, 0.3, top, 0.004));   // long sleeve
     const elbow = group(sh, 0, -0.29, 0);
+    if (gear) {
+      const roll = mesh(new THREE.TorusGeometry(0.038, 0.014, 8, 16), top, 0, -0.07, 0);   // rolled up to here
+      roll.rotation.x = PI / 2;
+      elbow.add(roll);
+      const wrap = mesh(new THREE.CylinderGeometry(0.03, 0.029, 0.05, 12), mat(LEATHER, 0, 0.7), 0, -0.225, 0);
+      elbow.add(wrap);
+    }
     elbow.add(limb(0.037, 0.027, 0.245, skin, 6e-3));
     const hand = group(elbow, 0, -0.265, 4e-3);
     hand.add(ball(0.029, skin, 0, -0.03, 0, 1, 1.55, 0.55));
@@ -260,6 +283,20 @@ export function buildHuman(s) {
       over.rotation.y = PI / 2;
       spine.add(over);
     }
+  }
+  if (gear) {
+    // belt with a gold buckle, and a satchel strap across the chest
+    const lea = mat(LEATHER, 0, 0.6);
+    const belt = mesh(new THREE.TorusGeometry(0.15, 0.018, 8, 28), lea, 0, 0.0, 0);
+    belt.rotation.x = PI / 2; belt.scale.set(1.04, female ? 0.72 : 0.74, 1);
+    hips.add(belt);
+    hips.add(mesh(new THREE.BoxGeometry(0.05, 0.035, 0.012), mat(GOLD, 0.8, 0.3), 0, 0, female ? 0.112 : 0.114));
+    const sash = mesh(new THREE.TorusGeometry(0.2, 0.012, 6, 30), lea, 0, 0.24, 0);
+    sash.rotation.set(PI / 2, 0.62, 0); sash.scale.set(female ? 0.72 : 0.8, female ? 0.62 : 0.68, 1);
+    spine.add(sash);
+    const pouch = mesh(new THREE.BoxGeometry(0.1, 0.09, 0.05), mat("#5a3b20", 0, 0.65), -0.13, -0.06, 0.03);
+    pouch.rotation.y = -0.6;
+    hips.add(pouch);
   }
   // ---- animation
   const flashMats = [skin, top, bottoms];

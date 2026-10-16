@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { dropSession, getLeaderboard, loadUser, readLocal, saveLocalUser, signInUrl, startngHome, submitRun } from '../shared/user.js';
 import { $, createInput, unlockAudio, tone, createStage } from '../shared/engine.js';
 import { createMusic } from './music.js';
+import { setupLook, LOW } from './look.js';
+import { dressTemple } from './dress.js';
 import { createFx } from './fx.js';
 import { buildLevel } from './level.js';
 import { createGame } from './game.js';
@@ -16,16 +18,18 @@ const store = {
 async function main() {
   const userReady = loadUser();
   const { renderer, scene, camera } = createStage({ fog: '#120c08', near: 16, far: 58, fov: 55 });
-  scene.add(new THREE.HemisphereLight('#ffdcb0', '#1a120c', 0.75));
-  const sun = new THREE.DirectionalLight('#ffcf9a', 1.0);
+  const cine = setupLook(renderer, scene, camera);
+  scene.add(new THREE.HemisphereLight('#ffd3a0', '#2a1608', 0.5));
+  const sun = new THREE.DirectionalLight('#ffc98a', 0.75);   // golden light from the cracks above
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 });
   sun.shadow.bias = -0.0006;
   scene.add(sun, sun.target);
 
   const fx = createFx(scene);
   const level = buildLevel(scene);
+  const dressing = dressTemple(scene, level, { low: LOW });
 
   // the temple, slowly looking down the hall, behind the opening screen
   let gating = true;
@@ -35,7 +39,7 @@ async function main() {
     const t = gateClock.getElapsedTime();
     camera.position.set(Math.sin(t * 0.15) * 1.8, 3.6, 2.5);
     camera.lookAt(Math.sin(t * 0.1) * 2, 1.6, -20);
-    renderer.render(scene, camera);
+    cine.render();
     requestAnimationFrame(gateFrame);
   })();
   const user = await userReady;
@@ -99,7 +103,9 @@ async function main() {
       $('gateWelcome').hidden = false;
       $('gateWelcome').textContent = `Welcome back, ${user.name}`;
       nameEl.hidden = true;
-      $('gateNote').textContent = 'Your start.ng character and name come with you into the temple.';
+      $('gateNote').textContent = 'Your start.ng character and name come with you into the temple. Change your look on start.ng.';
+      $('gateGuest').hidden = true;   // signed in: no guest option, and the look comes from start.ng
+      $('rhCustom').hidden = true;
     } else {
       nameEl.value = user.name === 'Explorer' ? '' : user.name;
       $('gateNote').textContent = 'Your name appears on the menu and on the end screen when you escape with the idol.';
@@ -290,12 +296,13 @@ async function main() {
     const k = G.shake;
     camera.position.set(camBase.x + (Math.random() - 0.5) * k, camBase.y + (Math.random() - 0.5) * k, camBase.z + (Math.random() - 0.5) * k);
     camera.lookAt(look);
+    dressing.update(dt, t);
     sun.target.position.set(p.x, 0, p.z - 4);
     sun.position.set(p.x + 6, 18, p.z + 6);
 
     hudT += dt;
     if (hudT > 0.1 && G.mode !== 'idle') { hudT = 0; updateHud(); }
-    renderer.render(scene, camera);
+    cine.render();
     requestAnimationFrame(frame);
   }
   frame();

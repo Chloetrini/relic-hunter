@@ -60,7 +60,7 @@ export function createGame({ scene, level, fx, hooks }) {
   let P = null;
   G.setupPlayer = (style) => {
     if (P) { scene.remove(P.root); P.human.dispose(); }
-    const human = buildHuman(style);
+    const human = buildHuman(style, { gear: true });
     human.parts.handR.add(pistol());
     human.parts.handL.add(pistol());
     scene.add(human.root);
@@ -409,8 +409,14 @@ export function createGame({ scene, level, fx, hooks }) {
     for (const k of L.keys) if (!k.taken) { k.m.rotation.y += dt * 2.5; k.m.position.y = k.base + Math.sin(t * 2.4) * 0.12; }
     if (!G.lever) L.lever.handle.rotation.x = 0.7; else L.lever.handle.rotation.x += (-0.7 - L.lever.handle.rotation.x) * Math.min(1, dt * 8);
     for (const tc of L.torches) {
-      tc.light.intensity = 20 + Math.sin(t * 13 + tc.seed) * 3 + Math.random() * 2;
-      tc.flame.scale.y = 1 + Math.sin(t * 17 + tc.seed) * 0.15;
+      const f = Math.sin(t * 13 + tc.seed) * 0.5 + Math.sin(t * 23 + tc.seed * 2) * 0.3 + Math.random() * 0.2;
+      tc.light.intensity = 24 + f * 6;
+      tc.flames.forEach((sp, k) => {
+        const w = Math.sin(t * (11 + k * 4) + tc.seed + k);
+        sp.scale.set((0.55 - k * 0.08) * (1 + w * 0.08), (1.1 - k * 0.15) * (1 + Math.sin(t * (17 + k * 3) + tc.seed) * 0.16), 1);
+        sp.position.x = (k - 1) * 0.12 + w * 0.03;
+      });
+      tc.halo.material.opacity = 0.45 + f * 0.12;
     }
     if (L.idol.group.visible) L.idol.group.rotation.y += dt * 0.8;
   }

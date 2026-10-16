@@ -14,7 +14,7 @@ const store = {
 };
 
 async function main() {
-  const user = await loadUser();
+  const userReady = loadUser();
   const { renderer, scene, camera } = createStage({ fog: '#120c08', near: 16, far: 58, fov: 55 });
   scene.add(new THREE.HemisphereLight('#ffdcb0', '#1a120c', 0.75));
   const sun = new THREE.DirectionalLight('#ffcf9a', 1.0);
@@ -26,6 +26,19 @@ async function main() {
 
   const fx = createFx(scene);
   const level = buildLevel(scene);
+
+  // the temple, slowly looking down the hall, behind the opening screen
+  let gating = true;
+  const gateClock = new THREE.Clock();
+  (function gateFrame() {
+    if (!gating) return;
+    const t = gateClock.getElapsedTime();
+    camera.position.set(Math.sin(t * 0.15) * 1.8, 3.6, 2.5);
+    camera.lookAt(Math.sin(t * 0.1) * 2, 1.6, -20);
+    renderer.render(scene, camera);
+    requestAnimationFrame(gateFrame);
+  })();
+  const user = await userReady;
 
   // ---- UI helpers
   function note(text, teal) {
@@ -94,18 +107,15 @@ async function main() {
         $('gateSignin').hidden = false;
         $('gateSignin').href = signInUrl();
       }
-      if (signInUrl()) {
-        const a = document.createElement('a');
-        a.href = signInUrl();
-        a.textContent = 'Sign in with start.ng';
-        $('gateNote').append(' ', a, ' to bring your own character.');
-      }
+      if (signInUrl()) $('gateNote').textContent = 'Sign in with start.ng to play as your own character and put your runs on the leaderboard.';
       setTimeout(() => nameEl.focus(), 50);
     }
+    $('rh-gate').classList.remove('wait');
     const done = () => {
       unlockAudio();
       tone(147, 0.9, 'sine', 0.08, 196);
       $('rh-gate').hidden = true;
+      gating = false;
       musicBtn.hidden = false;
       $('rh-title').hidden = false;
       resolve();

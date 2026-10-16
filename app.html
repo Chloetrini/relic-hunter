@@ -49,30 +49,35 @@
   .cz-opt.on, .cz-seg button.on { border-color: var(--gold); color: #1a120a; background: var(--gold); }
   .cz-seg { display: flex; gap: 0; }
   .cz-seg button { flex: 1; font-size: 13px; letter-spacing: .2em; text-transform: uppercase; }
-  /* opening screen */
+  /* opening screen: the game's own look, over the temple itself */
   #rh-gate { z-index: 20; display: grid; place-items: center; text-align: center; padding: 24px;
-             background: radial-gradient(ellipse 60% 55% at 50% 52%, #13252b 0%, #0a1316 55%, #050809 100%); }
+             background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(11,8,6,.55) 0%, rgba(8,5,3,.82) 60%, rgba(5,3,2,.96) 100%); }
   .gate-col { display: grid; justify-items: center; width: 100%; }
-  /* tall, tight capitals: drawn the same on every computer (no font download) */
-  .gate-title { margin: 0 0 74px; font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 700; white-space: nowrap;
-                font-size: clamp(34px, 7.4vw, 96px); line-height: 1; letter-spacing: .14em; padding-left: .14em; color: #f4f0e3;
-                transform: scale(.82, 1.45); transform-origin: center; }
-  #rh-gate .gate-label, #rh-gate .gate-welcome, #rh-gate .gate-enter, #rh-gate .gate-guest, #rh-gate .gate-note, #rh-gate .gate-input { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  .gate-label { font-size: 11px; letter-spacing: .38em; text-transform: uppercase; color: rgba(244,240,227,.45); margin-bottom: 14px; }
-  .gate-welcome { font-size: 20px; letter-spacing: .08em; color: #f4f0e3; margin-bottom: 22px; }
-  #rh-gate .gate-input { width: min(316px, 100%); padding: 13px 16px; margin-bottom: 14px; text-align: center; font-size: 18px; letter-spacing: .06em; color: #f4f0e3;
-                background: rgba(255,255,255,.035); border: 1px solid #3f8ea3; outline: none; }
-  #rh-gate .gate-input:focus { border-color: #6fc3d6; box-shadow: 0 0 0 3px rgba(63,142,163,.18); }
+  #rh-gate.wait .gate-col > :not(.gate-eyebrow):not(.gate-title):not(.gate-rule) { visibility: hidden; }
+  .gate-eyebrow { font-size: 12px; letter-spacing: .38em; text-transform: uppercase; color: var(--dim); }
+  .gate-title { margin: 12px 0 0; font-weight: 400; font-size: clamp(46px, 9vw, 112px); line-height: .95; letter-spacing: .06em; padding-left: .06em;
+                background: linear-gradient(180deg, #fff1c8 0%, var(--gold) 45%, var(--gold-2) 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+                filter: drop-shadow(0 6px 18px rgba(0,0,0,.7)); }
+  .gate-rule { height: 1px; width: 140px; margin: 26px 0 30px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .gate-label { font-size: 12px; letter-spacing: .32em; text-transform: uppercase; color: rgba(226,193,120,.75); margin-bottom: 10px; }
+  .gate-welcome { font-size: 24px; letter-spacing: .06em; font-style: italic; color: var(--ink); margin-bottom: 24px; }
+  #rh-gate .gate-input { width: min(316px, 100%); padding: 8px 4px; margin-bottom: 22px; text-align: center; font-family: var(--serif); font-size: 22px; letter-spacing: .06em; color: var(--ink);
+                background: transparent; border: 0; border-bottom: 1px solid rgba(226,193,120,.55); border-radius: 0; outline: none; }
+  #rh-gate .gate-input:focus { border-bottom-color: var(--gold); }
+  #rh-gate .gate-input::placeholder { color: rgba(243,234,216,.3); font-style: italic; }
   #rh-gate .gate-input.shake { animation: gateShake .35s; }
   @keyframes gateShake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
-  .gate-enter { padding: 12px 26px; font-size: 13px; letter-spacing: .38em; text-transform: uppercase; color: #0a1316; background: #f4f0e3; border: 0; cursor: pointer; }
-  .gate-enter:hover { background: #fff; }
-  #rh-gate .gate-signin { margin-top: 12px; padding: 11px 24px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: #f4f0e3; border: 1px solid rgba(244,240,227,.5); text-decoration: none; }
-  #rh-gate .gate-signin:hover { border-color: #f4f0e3; background: rgba(255,255,255,.05); }
-  .gate-guest { margin-top: 18px; padding: 2px; font-size: 11px; letter-spacing: .2em; color: rgba(244,240,227,.55); background: none; border: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-  .gate-guest:hover { color: #f4f0e3; }
-  .gate-note { margin: 38px 0 0; max-width: 360px; font-size: 11px; line-height: 1.7; color: rgba(244,240,227,.5); }
-  .gate-note a { color: rgba(244,240,227,.8); }
+  .gate-enter { padding: 13px 34px; font-size: 16px; letter-spacing: .26em; text-transform: uppercase; color: #1a120a; border: 0; cursor: pointer;
+                background: linear-gradient(180deg, #f3d999, var(--gold) 55%, var(--gold-2)); box-shadow: 0 6px 24px rgba(226,193,120,.18); transition: filter .2s; }
+  .gate-enter:hover { filter: brightness(1.08); }
+  #rh-gate .gate-signin { margin-top: 14px; padding: 10px 24px; font-size: 13px; letter-spacing: .24em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(226,193,120,.55); text-decoration: none; }
+  #rh-gate .gate-signin:hover { border-color: var(--gold); background: rgba(226,193,120,.08); }
+  .gate-guest { margin-top: 18px; padding: 2px; font-size: 14px; letter-spacing: .14em; font-style: italic; color: var(--dim); background: none; border: 0; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+  .gate-guest:hover { color: var(--ink); }
+  .gate-note { margin: 34px 0 0; max-width: 380px; font-size: 14px; line-height: 1.7; color: var(--dim); }
+  .gate-note a { color: var(--gold); }
+  body:has(#rh-gate:not([hidden])) .rh-touch { display: none !important; }
+  @media (max-width: 520px) { .gate-eyebrow { font-size: 10px; letter-spacing: .22em; } }
   .rh-drawer-head button { background: none; border: 1px solid var(--gold); color: var(--gold); padding: 6px 16px; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; }
   html body .pick { flex-direction: column; align-items: stretch; }
   html body .pick canvas { width: 100%; height: 240px; border-radius: 0; background: radial-gradient(circle at 50% 40%, rgba(226,193,120,.18), transparent 70%); }
@@ -157,12 +162,14 @@
 </head>
 <body>
 
-<div id="rh-gate" class="rh-screen">
+<div id="rh-gate" class="rh-screen wait">
   <div class="gate-col">
+    <div class="gate-eyebrow">An expedition into the Lost Temple</div>
     <h1 class="gate-title">RELIC HUNTER</h1>
+    <div class="gate-rule"></div>
     <label class="gate-label" for="gateName" id="gateLabel">Your name</label>
     <div class="gate-welcome" id="gateWelcome" hidden></div>
-    <input id="gateName" class="gate-input" type="text" maxlength="24" autocomplete="nickname" spellcheck="false">
+    <input id="gateName" class="gate-input" type="text" maxlength="24" placeholder="Explorer" autocomplete="nickname" spellcheck="false">
     <button id="gateEnter" class="gate-enter">Enter the temple</button>
     <a id="gateSignin" class="gate-signin" hidden>Sign in with start.ng</a>
     <button id="gateGuest" class="gate-guest">play as guest</button>

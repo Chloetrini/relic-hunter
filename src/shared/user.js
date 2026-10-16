@@ -5,6 +5,9 @@
 // for a couple of hours, and is never their sign-in). The game sends it as "Authorization: Bearer ...".
 // Without a session (not signed in, or not on start.ng) the player's own saved look is used.
 //
+// Already signed in on start.ng? The game asks start.ng's /connect page (in a hidden frame) who is
+// signed in, so the player is recognised without signing in again, and their run is saved through it.
+//
 // Returns { id?, name, style, source: 'startng' | 'local' }.
 // Leaderboard: this game's startng.json lists its stats (gems, then time). A signed-in player's run
 // goes to start.ng's database; a personal best time stays in this browser.
@@ -34,22 +37,70 @@ export function signInUrl() {
   return a ? `${a.home}/?return_to=${encodeURIComponent(location.origin + location.pathname + location.search)}` : null;
 }
 
-// Pick up a session start.ng just handed over, keep it for this tab, and clean the address bar.
+// Pick up a session start.ng just handed over, keep it until it expires (in every tab), and clean the address bar.
 (function takeSession() {
   const params = new URLSearchParams(location.hash.slice(1));
   const session = params.get('startng_session');
   if (!session) return;
-  try { sessionStorage.setItem(SESSION, session); } catch { /* storage blocked */ }
+  const secs = Number(params.get('expires_in')) || 7200;
+  try { localStorage.setItem(SESSION, JSON.stringify({ session, until: Date.now() + (secs - 60) * 1000 })); } catch { /* storage blocked */ }
   history.replaceState(null, '', location.pathname + location.search);
 })();
 
 function session() {
-  try { return sessionStorage.getItem(SESSION); } catch { return null; }
+  try {
+    const saved = JSON.parse(localStorage.getItem(SESSION));
+    if (saved && saved.session && saved.until > Date.now()) return saved.session;
+  } catch { /* storage blocked or bad data */ }
+  return null;
 }
 
 /** Forget the session (playing as guest, or it expired). */
 export function dropSession() {
-  try { sessionStorage.removeItem(SESSION); } catch { /* ignore */ }
+  try { localStorage.removeItem(SESSION); } catch { /* ignore */ }
+}
+
+// ---- start.ng's /connect page, in a hidden frame: who is signed in on start.ng, and saving runs for them
+let frame = null;
+let ready = null;
+let nextId = 1;
+function send(message, ms) {
+  const a = addresses();
+  return new Promise((resolve) => {
+    const requestId = `rh${nextId++}`;
+    const timer = setTimeout(() => { removeEventListener('message', onReply); resolve(null); }, ms);
+    function onReply(e) {
+      if (e.origin !== a.home || e.data?.requestId !== requestId) return;
+      clearTimeout(timer);
+      removeEventListener('message', onReply);
+      resolve(e.data);
+    }
+    addEventListener('message', onReply);
+    frame.contentWindow?.postMessage({ ...message, requestId }, a.home);
+  });
+}
+// Load /connect once; it's ready when it answers (asked every half second, for up to 8 seconds).
+function connect() {
+  const a = addresses();
+  if (!a) return Promise.resolve(false);
+  if (!ready) {
+    frame = Object.assign(document.createElement('iframe'), { src: `${a.home}/connect`, title: 'start.ng', hidden: true });
+    frame.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(frame);
+    ready = (async () => {
+      for (let i = 0; i < 16; i++) {
+        const reply = await send({ type: 'startng:whoami' }, 500);
+        if (reply) { ready.first = reply; return true; }
+      }
+      return false;
+    })();
+  }
+  return ready;
+}
+async function ask(message, ms = 8000) {
+  if (!(await connect())) return null;
+  if (message.type === 'startng:whoami' && ready.first) { const r = ready.first; ready.first = null; return r; }
+  return send(message, ms);
 }
 
 async function api(path, options = {}) {
@@ -75,6 +126,12 @@ async function api(path, options = {}) {
  * Returns { ok: true, best, improved, rank, stats } or { ok: false, error, signIn? }.
  */
 export async function submitRun(stats) {
+  if (!session()) {
+    // signed in on start.ng without a session here: save through /connect
+    const reply = await ask({ type: 'startng:score', stats });
+    if (reply?.ok) return { ok: true, ...reply.result };
+    if (reply) return { ok: false, signIn: /sign in/i.test(reply.error || ''), error: reply.error || "Couldn't save your run" };
+  }
   const res = await api('/scores', { method: 'POST', auth: true, body: { stats } });
   if (!res) return { ok: false, error: "Couldn't reach start.ng" };
   if (res.status === 401) return { ok: false, signIn: true, error: 'Sign in with start.ng to save your run' };
@@ -107,5 +164,8 @@ export async function loadUser() {
     const u = res && res.status === 200 ? res.data : null;
     if (u) return { id: u.id, name: String(u.name || 'Player').slice(0, 24), style: cleanStyle(u.style || {}), source: 'startng' };
   }
+  const reply = await ask({ type: 'startng:whoami' });
+  const u = reply?.user;
+  if (u) return { id: u.id, name: String(u.name || 'Player').slice(0, 24), style: cleanStyle(u.style || {}), source: 'startng' };
   return readLocal();
 }
